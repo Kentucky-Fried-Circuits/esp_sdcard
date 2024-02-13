@@ -17,7 +17,6 @@
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
 const char *const TAG_SD = "SD_Card";
-static sdmmc_card_t *card;
 
 esp_err_t initi_sd_card_and_Logging(void);
 esp_err_t unmount_sd_card(void);

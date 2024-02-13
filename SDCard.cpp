@@ -5,6 +5,8 @@
  */
 #include "SDCard.h"
 
+static sdmmc_card_t *card;
+
 /**
  * This function will mount the SD card. Since the logging task has to be done
  * with the sd card inserted, we start the logging task after the sd card is mounted.

@@ -19,7 +19,7 @@ extern smartBattery smartBattery;
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
- * will run every 10 seconds. If the csv file doesn't exist, it will create one.
+ * will run roughly every 15 seconds. If the csv file doesn't exist, it will create one.
  */
 void dataNowLog(void *pv_args)
 {
@@ -38,12 +38,25 @@ void dataNowLog(void *pv_args)
             if (logStringToFile(headers, fileName))
                 ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
         }
+
+        std::string str;
+        std::vector<const char *> vec = smartBattery.get_err_msg();
+        if (vec.empty())
+            str.append("No error.");
+        else
+        {
+            for (auto it : vec)
+            {
+                str.append(it).append(" ");
+            }
+        }
+
         // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
         snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
                  bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
                  smartBattery.get_battery_current(),
                  smartBattery.get_battery_internal_temp_c(),
-                 "FAULT TEST");
+                 str.c_str());
 
         logStringToFile(buffer, fileName);
 
