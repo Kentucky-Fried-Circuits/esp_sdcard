@@ -11,7 +11,7 @@ static sdmmc_card_t *card;
  * This function will mount the SD card. Since the logging task has to be done
  * with the sd card inserted, we start the logging task after the sd card is mounted.
  */
-esp_err_t initi_sd_card_and_Logging(void)
+esp_err_t start_sd_card_and_Logging(void)
 {
     if (isMounted())
         unmount_sd_card();
@@ -29,7 +29,6 @@ esp_err_t initi_sd_card_and_Logging(void)
     esp_err_t err = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
     if (err == ESP_OK)
     {
-        ESP_LOGI(TAG_SD, "Mounted");
         startLogging();
     }
     return err;
@@ -51,6 +50,57 @@ esp_err_t unmount_sd_card(void)
     }
 
     return err;
+}
+
+/**
+ * Who knows if this works.
+ * 
+ * Go through the sd card and remove the oldest file. 
+*/
+void removeOldestFile()
+{
+    // Open directory
+    DIR *dir = opendir(MOUNT_POINT);
+    if (!dir)
+    {
+        ESP_LOGE(TAG_SD, "Failed to open directory");
+        return;
+    }
+
+    struct dirent *ent;
+    struct stat st;
+    time_t oldest_time = LONG_MAX;
+    char oldest_file[FILE_NAME_SIZE];
+
+    // Iterate over files in the directory
+    while ((ent = readdir(dir)) != NULL)
+    {
+        char file_path[sizeof(ent->d_name) + sizeof(MOUNT_POINT)];
+        snprintf(file_path, sizeof(file_path), "%s/%s", MOUNT_POINT, ent->d_name);
+
+        // Get file info
+        if (stat(file_path, &st) == 0)
+        {
+            // Check if the file is a regular file and find the oldest one
+            if (S_ISREG(st.st_mode) && st.st_mtime < oldest_time)
+            {
+                oldest_time = st.st_mtime;
+                snprintf(oldest_file, sizeof(oldest_file), file_path);
+            }
+        }
+    }
+
+    closedir(dir);
+
+    // Remove the oldest file
+    if (remove(oldest_file) != 0)
+    {
+        ESP_LOGE(TAG_SD, "Failed to remove the oldest file");
+    }
+    else
+    {
+        ESP_LOGI(TAG_SD, "Removed oldest file: %s", oldest_file);
+    }
 }
 
 /**
@@ -126,7 +176,7 @@ void deleteFile(char *filePath)
 
 /**
  * Check if a file exists in the SD card or not. Return 1 or 0 depends on whether
- * the SD card has it or not. If there is no sd card, we unmount the sd card.
+ * the SD card has it or not.
  */
 int hasFile(char *fileName)
 {

@@ -12,8 +12,9 @@
 #define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
 #define HEADER_SIZE 100
 
-TaskHandle_t task_handle = NULL;
-const TickType_t xDelay = 15000 / portTICK_PERIOD_MS;
+static TaskHandle_t task_handle = NULL;
+TaskHandle_t memory_task = NULL;
+const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
 extern smartBattery smartBattery;
 
@@ -23,9 +24,12 @@ extern smartBattery smartBattery;
  */
 void dataNowLog(void *pv_args)
 {
+
+    std::vector<const char *> vec;
+    std::string str;
     for (;;)
     {
-        char fileName[20];
+        char fileName[FILE_NAME_SIZE];
         char buffer[125];
         char headers[HEADER_SIZE];
 
@@ -39,8 +43,8 @@ void dataNowLog(void *pv_args)
                 ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
         }
 
-        std::string str;
-        std::vector<const char *> vec = smartBattery.get_err_msg();
+        str.clear();
+        vec = smartBattery.get_err_msg();
         if (vec.empty())
             str.append("No error.");
         else
@@ -68,6 +72,25 @@ void dataNowLog(void *pv_args)
 }
 
 /**
+ * If we have less than 1000kb in the sd card, remove the oldest file in the sdcard.
+ */
+void memoryTask(void *param)
+{
+    uint32_t total;
+    uint32_t free;
+
+    while (1)
+    {
+        SD_getFreeSpace(&total, &free);
+        if (free < 1000)
+        {
+            removeOldestFile();
+        }
+        vTaskDelay(xDelay * 10);
+    }
+}
+
+/**
  * Since logging task requires SD card to be mounted, this function
  * will be called by the init_sd_card function. Users can choose to
  * mount or unmount the sd card through the UI.
@@ -75,7 +98,10 @@ void dataNowLog(void *pv_args)
 void startLogging()
 {
     if (task_handle == NULL)
-        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 3, NULL, 4, &task_handle);
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 3, NULL, 5, &task_handle);
+
+    if (memory_task == NULL)
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 2, NULL, 10, &task_handle);
 }
 
 /**
@@ -88,6 +114,11 @@ void stopLogging()
         vTaskDelete(task_handle);
         task_handle = NULL;
     }
+    if (memory_task != NULL)
+    {
+        vTaskDelete(memory_task);
+        memory_task = NULL;
+    }
 }
 
 /**
@@ -96,7 +127,7 @@ void stopLogging()
  */
 int isLoggingOn()
 {
-    if (task_handle && isMounted())
+    if (memory_task && task_handle && isMounted())
         return 1;
     return 0;
 }
