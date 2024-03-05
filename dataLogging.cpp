@@ -24,13 +24,12 @@ extern smartBattery smartBattery;
  */
 void dataNowLog(void *pv_args)
 {
-
-    std::vector<const char *> vec;
+    std::vector<char *> vec;
     std::string str;
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
-        char buffer[125];
+        char buffer[150];
         char headers[HEADER_SIZE];
 
         bat_time bt = smartBattery.get_battery_time();
@@ -54,7 +53,7 @@ void dataNowLog(void *pv_args)
                 str.append(it).append(" ");
             }
         }
-
+        
         // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
         snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
                  bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
