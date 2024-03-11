@@ -12,7 +12,7 @@
 #define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
 #define HEADER_SIZE 100
 
-static TaskHandle_t task_handle = NULL;
+TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
@@ -24,7 +24,7 @@ extern smartBattery smartBattery;
  */
 void dataNowLog(void *pv_args)
 {
-    std::vector<char *> vec;
+    std::vector<std::string> vec;
     std::string str;
     for (;;)
     {
@@ -83,6 +83,7 @@ void memoryTask(void *param)
         SD_getFreeSpace(&total, &free);
         if (free < 1000)
         {
+            ESP_LOGI("raydebug","try to remove old file");
             removeOldestFile();
         }
         vTaskDelay(xDelay * 10);
@@ -97,10 +98,10 @@ void memoryTask(void *param)
 void startLogging()
 {
     if (task_handle == NULL)
-        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 3, NULL, 5, &task_handle);
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 3, NULL, 10, &task_handle);
 
     if (memory_task == NULL)
-        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 2, NULL, 10, &task_handle);
+        xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);
 }
 
 /**
