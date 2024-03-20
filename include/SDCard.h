@@ -15,9 +15,19 @@
 #include "esp_vfs_fat.h"
 #include "dirent.h"
 
+// #define SD_MAGNETHEREAL
+#define SD_LESS
+
+#ifdef SD_MAGNETHEREAL
+#define SD_MMC
+#endif
+#ifdef SD_LESS
+#define SD_SPI
+#endif
+
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
-#define FILE_NAME_SIZE 20
+#define FILE_NAME_SIZE 100
 const char *const TAG_SD = "SD_Card";
 
 esp_err_t start_sd_card_and_Logging(void);

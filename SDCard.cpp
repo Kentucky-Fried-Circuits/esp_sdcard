@@ -2,6 +2,11 @@
  * 08/04/2023 - Ruizhe He, this source file contains code to mount and unmount
  * a SD card from the ESP 32 board. Comes with other supporting functions
  * that will be used for logging and file manipulating.
+ *
+ * If RMK board is using SPI / JTAG, SDMMC will not work. We can only use
+ * external SPI sd card. However, since GPIO 12 is also used for
+ * internal flash voltage control. We have to use espefuse.py set_flash_voltage 3.3V
+ * to set the flash voltage to 3.3V manually.
  */
 #include "SDCard.h"
 
@@ -16,6 +21,9 @@ esp_err_t start_sd_card_and_Logging(void)
     if (isMounted())
         unmount_sd_card();
 
+    esp_err_t ret;
+
+#ifdef SD_MMC
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.max_freq_khz = SDMMC_FREQ_PROBING;
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
@@ -23,8 +31,8 @@ esp_err_t start_sd_card_and_Logging(void)
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false, // Format the SD card if failed to mount
-        .max_files = MAX_FILES           // Max amount of files opening at one time
-    };
+        .max_files = MAX_FILES,          // Max amount of files opening at one time
+        .allocation_unit_size = 16 * 1024};
 
     esp_err_t err = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
     if (err == ESP_OK)
@@ -32,6 +40,66 @@ esp_err_t start_sd_card_and_Logging(void)
         startLogging();
     }
     return err;
+#endif
+#ifdef SD_SPI
+    sdspi_device_config_t device_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    device_config.host_id = SPI2_HOST;
+    device_config.gpio_cs = GPIO_NUM_15;
+
+    ESP_LOGI(TAG_SD, "Initializing SD card");
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    host.slot = device_config.host_id;
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 5,
+        .allocation_unit_size = 16 * 1024};
+
+    // spi_bus_config_t bus_cfg = {
+    //     .mosi_io_num = GPIO_NUM_13,
+    //     .miso_io_num = GPIO_NUM_12,
+    //     .sclk_io_num = GPIO_NUM_14,
+    //     .quadwp_io_num = -1,
+    //     .quadhd_io_num = -1,
+    //     .max_transfer_sz = 4000,
+    // };
+    // ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
+    // if (ret != ESP_OK)
+    // {
+    //     ESP_LOGE(TAG_SD, "Failed to initialize bus.");
+    //     return ESP_OK;
+    // }
+
+    // sdmmc_card_t* card;
+    ESP_LOGI(TAG_SD, "Mounting filesystem");
+    ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &host, &device_config, &mount_config, &card);
+    if (ret != ESP_OK)
+    {
+        if (ret == ESP_FAIL)
+        {
+            ESP_LOGE(TAG_SD, "Failed to mount filesystem. "
+                             "If you want the card to be formatted, set the CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED menuconfig option.");
+            return ESP_FAIL;
+        }
+        else
+        {
+            ESP_LOGE(TAG_SD, "Failed to initialize the card (%s). "
+                             "Make sure SD card lines have pull-up resistors in place.",
+                     esp_err_to_name(ret));
+            return ESP_FAIL;
+        }
+        return ESP_FAIL;
+    }
+    else if (ret == ESP_OK)
+        startLogging();
+
+    ESP_LOGI(TAG_SD, "Filesystem mounted");
+
+    // Card has been initialized, print its properties
+    sdmmc_card_print_info(stdout, card);
+
+    return ESP_OK;
+#endif
 }
 
 /**
@@ -54,9 +122,9 @@ esp_err_t unmount_sd_card(void)
 
 /**
  * Who knows if this works.
- * 
- * Go through the sd card and remove the oldest file. 
-*/
+ *
+ * Go through the sd card and remove the oldest file.
+ */
 void removeOldestFile()
 {
     // Open directory
@@ -77,7 +145,6 @@ void removeOldestFile()
     {
         char file_path[sizeof(ent->d_name) + sizeof(MOUNT_POINT)];
         snprintf(file_path, sizeof(file_path), "%s/%s", MOUNT_POINT, ent->d_name);
-
         // Get file info
         if (stat(file_path, &st) == 0)
         {
@@ -88,6 +155,7 @@ void removeOldestFile()
                 snprintf(oldest_file, sizeof(oldest_file), file_path);
             }
         }
+        vTaskDelay(1);
     }
 
     closedir(dir);
@@ -95,7 +163,7 @@ void removeOldestFile()
     // Remove the oldest file
     if (remove(oldest_file) != 0)
     {
-        ESP_LOGE(TAG_SD, "Failed to remove the oldest file");
+        ESP_LOGE(TAG_SD, "Failed to remove the oldest file, %s", oldest_file);
     }
     else
     {
