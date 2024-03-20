@@ -9,11 +9,6 @@
  * SPI SD Card. Depends on what define we are using, we can choose between what logging
  *  we are doing. 
  */
-
-#ifdef SD_LESS
-#include "smartBattery.h"
-#endif
-
 #include "SDCard.h"
 
 #define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"

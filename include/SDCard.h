@@ -25,6 +25,10 @@
 #define SD_SPI
 #endif
 
+#ifdef SD_LESS
+#include "smartBattery.h"
+#endif
+
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
 #define FILE_NAME_SIZE 100
