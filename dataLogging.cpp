@@ -101,21 +101,21 @@ void memoryTask(void *param)
  */
 void startLogging()
 {
-    xTaskCreate([](void *param)
-                {
-        while(1){
-            struct timeval tv_now;
-            gettimeofday(&tv_now, NULL);
-            char timeString[26];  // The length of the string is fixed for ctime
-            ctime_r(&tv_now.tv_sec, timeString);
-            ESP_LOGI("raydebug","logging memory %s", timeString);
-            memoryLogging(timeString);
+    // xTaskCreate([](void *param)
+    //             {
+    //     while(1){
+    //         struct timeval tv_now;
+    //         gettimeofday(&tv_now, NULL);
+    //         char timeString[26];  // The length of the string is fixed for ctime
+    //         ctime_r(&tv_now.tv_sec, timeString);
+    //         ESP_LOGI("raydebug","logging memory %s", timeString);
+    //         memoryLogging(timeString);
 
-            vTaskDelay(500);} },
-                "memoryLog", 4000, NULL, 5, NULL);
+    //         vTaskDelay(500);} },
+    //             "memoryLog", 4000, NULL, 5, NULL);
 
     // if (task_handle == NULL)
-    //     xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIM  AL_STACK_SIZE * 4, NULL, 10, &task_handle);
 
     if (memory_task == NULL)
         xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);

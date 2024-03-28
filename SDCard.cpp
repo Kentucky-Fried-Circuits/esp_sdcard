@@ -34,17 +34,12 @@ esp_err_t start_sd_card_and_Logging(void)
         .max_files = MAX_FILES,          // Max amount of files opening at one time
         .allocation_unit_size = 16 * 1024};
 
-    esp_err_t err = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
-    if (err == ESP_OK)
-    {
-        startLogging();
-    }
-    return err;
+    ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
 #endif
 #ifdef SD_SPI
     sdspi_device_config_t device_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     device_config.host_id = SPI2_HOST;
-    device_config.gpio_cs = GPIO_NUM_15;
+    device_config.gpio_cs = SD_CS_PORT;
 
     ESP_LOGI(TAG_SD, "Initializing SD card");
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
@@ -90,16 +85,18 @@ esp_err_t start_sd_card_and_Logging(void)
         }
         return ESP_FAIL;
     }
-    else if (ret == ESP_OK)
-        startLogging();
-
     ESP_LOGI(TAG_SD, "Filesystem mounted");
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
 
-    return ESP_OK;
 #endif
+
+    if (ret == ESP_OK)
+    {
+        startLogging();
+    }
+    return ret;
 }
 
 /**
