@@ -19,6 +19,7 @@ TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
 extern smartBattery smartBattery;
+extern SemaphoreHandle_t spiSemaphore;
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -101,21 +102,24 @@ void memoryTask(void *param)
  */
 void startLogging()
 {
-    // xTaskCreate([](void *param)
-    //             {
-    //     while(1){
-    //         struct timeval tv_now;
-    //         gettimeofday(&tv_now, NULL);
-    //         char timeString[26];  // The length of the string is fixed for ctime
-    //         ctime_r(&tv_now.tv_sec, timeString);
-    //         ESP_LOGI("raydebug","logging memory %s", timeString);
-    //         memoryLogging(timeString);
+    xTaskCreate([](void *param)
+                {
+        while(1){
+              if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000))){
+            struct timeval tv_now;
+            gettimeofday(&tv_now, NULL);
+            char timeString[26];  // The length of the string is fixed for ctime
+            ctime_r(&tv_now.tv_sec, timeString);
+            ESP_LOGI("raydebug","logging memory %s", timeString);
+            memoryLogging(timeString);
+            
+            xSemaphoreGive(spiSemaphore);}
 
-    //         vTaskDelay(500);} },
-    //             "memoryLog", 4000, NULL, 5, NULL);
+            vTaskDelay(1000);} },
+                "memoryLog", 4000, NULL, 5, NULL);
 
     // if (task_handle == NULL)
-        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIM  AL_STACK_SIZE * 4, NULL, 10, &task_handle);
+        // xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
 
     if (memory_task == NULL)
         xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);
