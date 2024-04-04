@@ -4,10 +4,10 @@
  * stopLogging  -> Call to stop the logging task
  * isLoggingOn  -> Call to check if the logging task is running
  * SD card is mounting function is called here.
- * 
+ *
  * This file is used to log data into SD card, either the internal ones or the external
  * SPI SD Card. Depends on what define we are using, we can choose between what logging
- *  we are doing. 
+ *  we are doing.
  */
 #include "SDCard.h"
 
@@ -19,7 +19,9 @@ TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
 extern smartBattery smartBattery;
+#ifdef SD_LESS
 extern SemaphoreHandle_t spiSemaphore;
+#endif   
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -36,34 +38,39 @@ void dataNowLog(void *pv_args)
         char headers[HEADER_SIZE];
 
 #ifdef SD_LESS
-        bat_time bt = smartBattery.get_battery_time();
-        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
-
-        if (!hasFile(fileName))
+        if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000)))
         {
-            snprintf(headers, HEADER_SIZE, "%s", HEADER1);
-            if (logStringToFile(headers, fileName))
-                ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
-        }
+            bat_time bt = smartBattery.get_battery_time();
+            snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
 
-        str.clear();
-        vec = smartBattery.get_err_msg();
-        if (vec.empty())
-            str.append("No error.");
-        else
-        {
-            for (auto it : vec)
+            if (!hasFile(fileName))
             {
-                str.append(it).append(" ");
+                snprintf(headers, HEADER_SIZE, "%s", HEADER1);
+                if (logStringToFile(headers, fileName))
+                    ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
             }
-        }
 
-        // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-        snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
-                 bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
-                 smartBattery.get_battery_current(),
-                 smartBattery.get_battery_internal_temp_c(),
-                 str.c_str());
+            str.clear();
+            vec = smartBattery.get_err_msg();
+            if (vec.empty())
+                str.append("No error.");
+            else
+            {
+                for (auto it : vec)
+                {
+                    str.append(it).append(" ");
+                }
+            }
+
+            // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
+            snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
+                     bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
+                     smartBattery.get_battery_current(),
+                     smartBattery.get_battery_internal_temp_c(),
+                     str.c_str());
+
+            xSemaphoreGive(spiSemaphore);
+        }
 
 #endif
         logStringToFile(buffer, fileName);
@@ -102,24 +109,22 @@ void memoryTask(void *param)
  */
 void startLogging()
 {
-    xTaskCreate([](void *param)
-                {
-        while(1){
-              if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000))){
-            struct timeval tv_now;
-            gettimeofday(&tv_now, NULL);
-            char timeString[26];  // The length of the string is fixed for ctime
-            ctime_r(&tv_now.tv_sec, timeString);
-            ESP_LOGI("raydebug","logging memory %s", timeString);
-            memoryLogging(timeString);
-            
-            xSemaphoreGive(spiSemaphore);}
+    // xTaskCreate([](void *param)
+    //             {
+    //     while(1){
+    //           if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000))){
+    //         struct timeval tv_now;
+    //         gettimeofday(&tv_now, NULL);
+    //         char timeString[26];  // The length of the string is fixed for ctime
+    //         ctime_r(&tv_now.tv_sec, timeString);
+    //         ESP_LOGI("raydebug","logging memory %s", timeString);
+    //         memoryLogging(timeString);
+    //         xSemaphoreGive(spiSemaphore);}
+    //         vTaskDelay(5000);} },
+    //             "memoryLog", 4000, NULL, 5, NULL);
 
-            vTaskDelay(1000);} },
-                "memoryLog", 4000, NULL, 5, NULL);
-
-    // if (task_handle == NULL)
-        // xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
+    if (task_handle == NULL)
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
 
     if (memory_task == NULL)
         xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);
