@@ -7,9 +7,9 @@
  * external SPI sd card. However, since GPIO 12 is also used for
  * internal flash voltage control. We have to use espefuse.py set_flash_voltage 3.3V
  * to set the flash voltage to 3.3V manually.
- * 
+ *
  * Also if we are using SPI for SD card, make sure to start the sd card after other
- * spi devices are added. 
+ * spi devices are added.
  */
 #include "SDCard.h"
 
@@ -161,7 +161,7 @@ void removeOldestFile()
  */
 int logStringToFile(const char *formattedString, char *fileName)
 {
-    if (card != NULL)
+    if (card == NULL)
         return 0;
 
     std::string fullPath;
@@ -242,6 +242,9 @@ int hasFile(char *fileName)
         temp.append(MOUNT_POINT).append("/");
         filePath.insert(0, temp);
     }
+
+    ESP_LOGI("raydebug", "%s", filePath.c_str());
+
     if (stat(filePath.c_str(), &st) == 0)
         return 1;
 

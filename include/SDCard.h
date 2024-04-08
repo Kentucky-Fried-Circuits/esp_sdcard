@@ -48,5 +48,6 @@ void removeOldestFile(void);
 // dataLogging.cpp
 void startLogging();
 void stopLogging();
+void SDCard_Task(void* arg);
 
 #endif // SDCARD_H

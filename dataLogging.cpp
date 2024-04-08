@@ -18,11 +18,10 @@ TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
-extern smartBattery smartBattery;
 #ifdef SD_LESS
 extern SemaphoreHandle_t spiSemaphore;
-#endif   
-
+extern smartBattery smartBattery;
+#endif
 /**
  * The basic task for logging live data into csv file in SD card. This function
  * will run roughly every 15 seconds. If the csv file doesn't exist, it will create one.
@@ -42,7 +41,6 @@ void dataNowLog(void *pv_args)
         {
             bat_time bt = smartBattery.get_battery_time();
             snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
-
             if (!hasFile(fileName))
             {
                 snprintf(headers, HEADER_SIZE, "%s", HEADER1);
@@ -68,13 +66,10 @@ void dataNowLog(void *pv_args)
                      smartBattery.get_battery_current(),
                      smartBattery.get_battery_internal_temp_c(),
                      str.c_str());
-
+            logStringToFile(buffer, fileName);
             xSemaphoreGive(spiSemaphore);
         }
-
 #endif
-        logStringToFile(buffer, fileName);
-
         /* This function is used for checking memory leak */
         // memoryLogging(time_str);
 
@@ -93,7 +88,7 @@ void memoryTask(void *param)
     while (1)
     {
         SD_getFreeSpace(&total, &free);
-        if (free < 1000)
+        if (free < 10000)
         {
             ESP_LOGI("raydebug", "try to remove old file");
             removeOldestFile();
@@ -109,20 +104,6 @@ void memoryTask(void *param)
  */
 void startLogging()
 {
-    // xTaskCreate([](void *param)
-    //             {
-    //     while(1){
-    //           if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000))){
-    //         struct timeval tv_now;
-    //         gettimeofday(&tv_now, NULL);
-    //         char timeString[26];  // The length of the string is fixed for ctime
-    //         ctime_r(&tv_now.tv_sec, timeString);
-    //         ESP_LOGI("raydebug","logging memory %s", timeString);
-    //         memoryLogging(timeString);
-    //         xSemaphoreGive(spiSemaphore);}
-    //         vTaskDelay(5000);} },
-    //             "memoryLog", 4000, NULL, 5, NULL);
-
     if (task_handle == NULL)
         xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
 
@@ -156,4 +137,27 @@ int isLoggingOn()
     if (memory_task && task_handle && isMounted())
         return 1;
     return 0;
+}
+
+/*Allow us to automatically mount and unmount SD card
+as long as this task is running*/
+void SDCard_Task(void *arg)
+{
+    // /*Wait for the bus to come online before starting the sd card*/
+    vTaskDelay(1500);
+    uint32_t tot = 0;
+    uint32_t free = 0;
+
+    while (1)
+    {
+
+        if (!isMounted())
+        {
+            start_sd_card_and_Logging();
+        }
+
+        SD_getFreeSpace(&tot, &free);
+
+        vTaskDelay(2000);
+    }
 }
