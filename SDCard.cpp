@@ -243,8 +243,6 @@ int hasFile(char *fileName)
         filePath.insert(0, temp);
     }
 
-    ESP_LOGI("raydebug", "%s", filePath.c_str());
-
     if (stat(filePath.c_str(), &st) == 0)
         return 1;
 

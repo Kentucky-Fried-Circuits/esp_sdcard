@@ -22,6 +22,7 @@ const char *TAG_DATALOG = "Data_Logging";
 extern SemaphoreHandle_t spiSemaphore;
 extern smartBattery smartBattery;
 #endif
+
 /**
  * The basic task for logging live data into csv file in SD card. This function
  * will run roughly every 15 seconds. If the csv file doesn't exist, it will create one.
@@ -78,7 +79,7 @@ void dataNowLog(void *pv_args)
 }
 
 /**
- * If we have less than 1000kb in the sd card, remove the oldest file in the sdcard.
+ * If we have less than 10000kb in the sd card, remove the oldest file in the sdcard.
  */
 void memoryTask(void *param)
 {
