@@ -19,7 +19,6 @@ TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
 #ifdef SD_LESS
-extern SemaphoreHandle_t spiSemaphore;
 extern smartBattery smartBattery;
 #endif
 
@@ -38,8 +37,7 @@ void dataNowLog(void *pv_args)
         char headers[HEADER_SIZE];
 
 #ifdef SD_LESS
-        if (pdTRUE == xSemaphoreTake(spiSemaphore, pdMS_TO_TICKS(1000)))
-        {
+
             bat_time bt = smartBattery.get_battery_time();
             snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
             if (!hasFile(fileName))
@@ -68,8 +66,6 @@ void dataNowLog(void *pv_args)
                      smartBattery.get_battery_internal_temp_c(),
                      str.c_str());
             logStringToFile(buffer, fileName);
-            xSemaphoreGive(spiSemaphore);
-        }
 #endif
         /* This function is used for checking memory leak */
         // memoryLogging(time_str);
