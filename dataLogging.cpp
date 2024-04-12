@@ -30,6 +30,7 @@ void dataNowLog(void *pv_args)
 {
     std::vector<std::string> vec;
     std::string str;
+    bat_time bt;
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
@@ -38,34 +39,34 @@ void dataNowLog(void *pv_args)
 
 #ifdef SD_LESS
 
-            bat_time bt = smartBattery.get_battery_time();
-            snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
-            if (!hasFile(fileName))
-            {
-                snprintf(headers, HEADER_SIZE, "%s", HEADER1);
-                if (logStringToFile(headers, fileName))
-                    ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
-            }
+        bt = smartBattery.get_battery_time();
+        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
+        if (!hasFile(fileName))
+        {
+            snprintf(headers, HEADER_SIZE, "%s", HEADER1);
+            if (logStringToFile(headers, fileName))
+                ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
+        }
 
-            str.clear();
-            vec = smartBattery.get_err_msg();
-            if (vec.empty())
-                str.append("No error.");
-            else
+        str.clear();
+        vec = smartBattery.get_err_msg();
+        if (vec.empty())
+            str.append("No error.");
+        else
+        {
+            for (auto it : vec)
             {
-                for (auto it : vec)
-                {
-                    str.append(it).append(" ");
-                }
+                str.append(it).append(" ");
             }
+        }
 
-            // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-            snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
-                     bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
-                     smartBattery.get_battery_current(),
-                     smartBattery.get_battery_internal_temp_c(),
-                     str.c_str());
-            logStringToFile(buffer, fileName);
+        // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
+        snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
+                 bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
+                 smartBattery.get_battery_current(),
+                 smartBattery.get_battery_internal_temp_c(),
+                 str.c_str());
+        logStringToFile(buffer, fileName);
 #endif
         /* This function is used for checking memory leak */
         // memoryLogging(time_str);
@@ -102,10 +103,10 @@ void memoryTask(void *param)
 void startLogging()
 {
     if (task_handle == NULL)
-        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 5, NULL, 6, &task_handle);
 
     if (memory_task == NULL)
-        xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);
+        xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 5, NULL, 4, &memory_task);
 }
 
 /**
