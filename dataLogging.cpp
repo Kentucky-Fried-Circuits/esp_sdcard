@@ -68,6 +68,8 @@ void dataNowLog(void *pv_args)
                  str.c_str());
         logStringToFile(buffer, fileName);
 #endif
+        // char time_str[25];
+        // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);
         /* This function is used for checking memory leak */
         // memoryLogging(time_str);
 
