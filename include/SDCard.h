@@ -25,6 +25,11 @@
 #define SD_SPI
 #endif
 
+#ifdef SD_LESS
+#include "smartBattery.h"
+#define SD_CS_PORT GPIO_NUM_32
+#endif
+
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
 #define FILE_NAME_SIZE 100
@@ -43,5 +48,6 @@ void removeOldestFile(void);
 // dataLogging.cpp
 void startLogging();
 void stopLogging();
+void begin_SD();
 
 #endif // SDCARD_H

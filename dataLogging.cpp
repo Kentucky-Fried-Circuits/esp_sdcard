@@ -4,16 +4,14 @@
  * stopLogging  -> Call to stop the logging task
  * isLoggingOn  -> Call to check if the logging task is running
  * SD card is mounting function is called here.
- * 
+ *
  * This file is used to log data into SD card, either the internal ones or the external
  * SPI SD Card. Depends on what define we are using, we can choose between what logging
- *  we are doing. 
+ *  we are doing.
+ *
+ * For the purpose of logging data into the SD card, use dataNowLog, modify it and the header
+ * to what you need.
  */
-
-#ifdef SD_LESS
-#include "smartBattery.h"
-#endif
-
 #include "SDCard.h"
 
 #define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
@@ -23,7 +21,9 @@ TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
+#ifdef SD_LESS
 extern smartBattery smartBattery;
+#endif
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -33,6 +33,7 @@ void dataNowLog(void *pv_args)
 {
     std::vector<std::string> vec;
     std::string str;
+    bat_time bt;
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
@@ -40,9 +41,9 @@ void dataNowLog(void *pv_args)
         char headers[HEADER_SIZE];
 
 #ifdef SD_LESS
-        bat_time bt = smartBattery.get_battery_time();
-        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
 
+        bt = smartBattery.get_battery_time();
+        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
         if (!hasFile(fileName))
         {
             snprintf(headers, HEADER_SIZE, "%s", HEADER1);
@@ -68,10 +69,10 @@ void dataNowLog(void *pv_args)
                  smartBattery.get_battery_current(),
                  smartBattery.get_battery_internal_temp_c(),
                  str.c_str());
-
-#endif
         logStringToFile(buffer, fileName);
-
+#endif
+        // char time_str[25];
+        // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);
         /* This function is used for checking memory leak */
         // memoryLogging(time_str);
 
@@ -80,7 +81,7 @@ void dataNowLog(void *pv_args)
 }
 
 /**
- * If we have less than 1000kb in the sd card, remove the oldest file in the sdcard.
+ * If we have less than 10000kb in the sd card, remove the oldest file in the sdcard.
  */
 void memoryTask(void *param)
 {
@@ -90,7 +91,7 @@ void memoryTask(void *param)
     while (1)
     {
         SD_getFreeSpace(&total, &free);
-        if (free < 1000)
+        if (free < 10000)
         {
             ESP_LOGI("raydebug", "try to remove old file");
             removeOldestFile();
@@ -106,24 +107,11 @@ void memoryTask(void *param)
  */
 void startLogging()
 {
-    xTaskCreate([](void *param)
-                {
-        while(1){
-            struct timeval tv_now;
-            gettimeofday(&tv_now, NULL);
-            char timeString[26];  // The length of the string is fixed for ctime
-            ctime_r(&tv_now.tv_sec, timeString);
-            ESP_LOGI("raydebug","logging memory %s", timeString);
-            memoryLogging(timeString);
-
-            vTaskDelay(500);} },
-                "memoryLog", 4000, NULL, 5, NULL);
-
-    // if (task_handle == NULL)
-    //     xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 4, NULL, 10, &task_handle);
+    if (task_handle == NULL)
+        xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 5, NULL, 6, &task_handle);
 
     if (memory_task == NULL)
-        xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &memory_task);
+        xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 5, NULL, 4, &memory_task);
 }
 
 /**
@@ -152,4 +140,32 @@ int isLoggingOn()
     if (memory_task && task_handle && isMounted())
         return 1;
     return 0;
+}
+
+/*Allow us to automatically mount and unmount SD card
+as long as this task is running*/
+void SDCard_Task(void *arg)
+{
+    // /*Wait for the bus to come online before starting the sd card*/
+    vTaskDelay(1500);
+    uint32_t tot = 0;
+    uint32_t free = 0;
+
+    while (1)
+    {
+
+        if (!isMounted())
+        {
+            start_sd_card_and_Logging();
+        }
+
+        SD_getFreeSpace(&tot, &free);
+
+        vTaskDelay(2000);
+    }
+}
+
+void begin_SD()
+{
+    xTaskCreate(SDCard_Task, "SDcard_task", configMINIMAL_STACK_SIZE * 5, NULL, 7, NULL);
 }
