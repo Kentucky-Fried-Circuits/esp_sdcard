@@ -8,8 +8,12 @@
  * internal flash voltage control. We have to use espefuse.py set_flash_voltage 3.3V
  * to set the flash voltage to 3.3V manually.
  *
- * Also if we are using SPI for SD card, make sure to start the sd card after other
- * spi devices are added.
+ * The SPI bus initialization is commented out because some other components will start the bus.
+ * If your project only uses SD card with SPI bus, you should initilize the SPI bus here.
+ * If there are multiple SPI devices, they can share other data line, but they need to
+ * have individual cs line. Any GPIO can act as a CS port.
+ *
+ * Check out the SDCard.h define to see which protocol is used.
  */
 #include "SDCard.h"
 
@@ -52,6 +56,21 @@ esp_err_t start_sd_card_and_Logging(void)
         .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024};
+
+    // spi_bus_config_t bus_cfg = {
+    //     .mosi_io_num = GPIO_NUM_13,
+    //     .miso_io_num = GPIO_NUM_12,
+    //     .sclk_io_num = GPIO_NUM_14,
+    //     .quadwp_io_num = -1,
+    //     .quadhd_io_num = -1,
+    //     .max_transfer_sz = 4000,
+    // };
+    // ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
+    // if (ret != ESP_OK)
+    // {
+    //     ESP_LOGE(TAG_SD, "Failed to initialize bus.");
+    //     return ESP_OK;
+    // }
 
     ESP_LOGI(TAG_SD, "Mounting filesystem");
     ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &host, &device_config, &mount_config, &card);

@@ -8,6 +8,9 @@
  * This file is used to log data into SD card, either the internal ones or the external
  * SPI SD Card. Depends on what define we are using, we can choose between what logging
  *  we are doing.
+ *
+ * For the purpose of logging data into the SD card, use dataNowLog, modify it and the header
+ * to what you need.
  */
 #include "SDCard.h"
 
@@ -160,4 +163,9 @@ void SDCard_Task(void *arg)
 
         vTaskDelay(2000);
     }
+}
+
+void begin_SD()
+{
+    xTaskCreate(SDCard_Task, "SDcard_task", configMINIMAL_STACK_SIZE * 5, NULL, 7, NULL);
 }
