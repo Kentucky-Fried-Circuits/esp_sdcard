@@ -13,6 +13,7 @@
  * to what you need.
  */
 #include "SDCard.h"
+#include <vector>
 
 #define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
 #define HEADER_SIZE 100
@@ -21,9 +22,6 @@ TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
-#ifdef SD_LESS
-extern smartBattery smartBattery;
-#endif
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -33,17 +31,15 @@ void dataNowLog(void *pv_args)
 {
     std::vector<std::string> vec;
     std::string str;
-    bat_time bt;
+    
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
         char buffer[150];
         char headers[HEADER_SIZE];
 
-#ifdef SD_LESS
 
-        bt = smartBattery.get_battery_time();
-        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
+        snprintf(fileName, sizeof(fileName), ".csv");
         if (!hasFile(fileName))
         {
             snprintf(headers, HEADER_SIZE, "%s", HEADER1);
@@ -52,25 +48,9 @@ void dataNowLog(void *pv_args)
         }
 
         str.clear();
-        vec = smartBattery.get_err_msg();
-        if (vec.empty())
-            str.append("No error.");
-        else
-        {
-            for (auto it : vec)
-            {
-                str.append(it).append(" ");
-            }
-        }
-
-        // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-        snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
-                 bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
-                 smartBattery.get_battery_current(),
-                 smartBattery.get_battery_internal_temp_c(),
-                 str.c_str());
+        
         logStringToFile(buffer, fileName);
-#endif
+
         // char time_str[25];
         // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);
         /* This function is used for checking memory leak */

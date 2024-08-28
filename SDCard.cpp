@@ -30,7 +30,6 @@ esp_err_t start_sd_card_and_Logging(void)
 
     esp_err_t ret;
 
-#ifdef SD_MMC
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.max_freq_khz = SDMMC_FREQ_PROBING;
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
@@ -42,61 +41,6 @@ esp_err_t start_sd_card_and_Logging(void)
         .allocation_unit_size = 16 * 1024};
 
     ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
-#endif
-#ifdef SD_SPI
-    sdspi_device_config_t device_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    device_config.host_id = SPI2_HOST;
-    device_config.gpio_cs = SD_CS_PORT;
-
-    ESP_LOGI(TAG_SD, "Initializing SD card");
-    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-    host.slot = device_config.host_id;
-
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
-        .max_files = 5,
-        .allocation_unit_size = 16 * 1024};
-
-    // spi_bus_config_t bus_cfg = {
-    //     .mosi_io_num = GPIO_NUM_13,
-    //     .miso_io_num = GPIO_NUM_12,
-    //     .sclk_io_num = GPIO_NUM_14,
-    //     .quadwp_io_num = -1,
-    //     .quadhd_io_num = -1,
-    //     .max_transfer_sz = 4000,
-    // };
-    // ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
-    // if (ret != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG_SD, "Failed to initialize bus.");
-    //     return ESP_OK;
-    // }
-
-    ESP_LOGI(TAG_SD, "Mounting filesystem");
-    ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &host, &device_config, &mount_config, &card);
-    if (ret != ESP_OK)
-    {
-        if (ret == ESP_FAIL)
-        {
-            ESP_LOGE(TAG_SD, "Failed to mount filesystem. "
-                             "If you want the card to be formatted, set the CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED menuconfig option.");
-            return ESP_FAIL;
-        }
-        else
-        {
-            ESP_LOGE(TAG_SD, "Failed to initialize the card (%s). "
-                             "Make sure SD card lines have pull-up resistors in place.",
-                     esp_err_to_name(ret));
-            return ESP_FAIL;
-        }
-        return ESP_FAIL;
-    }
-    ESP_LOGI(TAG_SD, "Filesystem mounted");
-
-    // Card has been initialized, print its properties
-    sdmmc_card_print_info(stdout, card);
-
-#endif
 
     if (ret == ESP_OK)
     {
@@ -281,6 +225,6 @@ void memoryLogging(char *time_str)
         ESP_LOGE(TAG_SD, "Failed to open file for writing");
         return;
     }
-    fprintf(f, "Current time is %s, %zu\n", time_str, esp_get_free_heap_size());
+    fprintf(f, "Current time is %s, %ld\n", time_str, esp_get_free_heap_size());
     fclose(f);
 }

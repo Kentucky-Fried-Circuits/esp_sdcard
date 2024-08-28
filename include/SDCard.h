@@ -7,6 +7,7 @@
 #include <string>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/unistd.h>
 
 #include "esp_log.h"
 #include "driver/sdmmc_host.h"
@@ -14,18 +15,6 @@
 #include "sdmmc_cmd.h"
 #include "esp_vfs_fat.h"
 #include "dirent.h"
-
-// #define SD_MAGNETHEREAL
-#define SD_LESS
-
-#ifdef SD_MAGNETHEREAL
-#define SD_MMC
-#endif
-#ifdef SD_LESS
-#define SD_SPI
-#define SD_CS_PORT GPIO_NUM_32
-#include "smartBattery.h"
-#endif
 
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
