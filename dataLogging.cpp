@@ -1,8 +1,7 @@
 /**
- * 08/09/2023 - Ruizhe He, this file contains functions related to data logging.
+ * 08/29/2024 - Ruizhe He, this file contains functions related to data logging. Updated for hypr 3K logging.
  * startLogging -> Call to start the logging task
  * stopLogging  -> Call to stop the logging task
- * isLoggingOn  -> Call to check if the logging task is running
  * SD card is mounting function is called here.
  *
  * This file is used to log data into SD card, either the internal ones or the external
@@ -13,47 +12,55 @@
  * to what you need.
  */
 #include "SDCard.h"
-#include <vector>
+#include "blueSkyModbus.h"
+#include "ds3231.h"
 
-#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
-#define HEADER_SIZE 100
+#define BUFFER_SIZE 300
 
 TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
-const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
+const TickType_t xDelay = 5500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
+
+extern i2c_dev_t clock_dev;
+extern bsmb blueSky;
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
- * will run roughly every 15 seconds. If the csv file doesn't exist, it will create one.
+ * will run roughly every 6 seconds. If the csv file doesn't exist, it will create one.
+ * 
+ * A header will be dynamically created from another class since we may expand what we will log.
+ * Logging value will be retrieved as string with correct format and unit. 
  */
 void dataNowLog(void *pv_args)
 {
-    std::vector<std::string> vec;
     std::string str;
-    
+    struct tm time;
+    char time_str[25];
+
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
-        char buffer[150];
-        char headers[HEADER_SIZE];
 
+        ds3231_get_time(&clock_dev, &time);
 
-        snprintf(fileName, sizeof(fileName), ".csv");
+        strftime(fileName, sizeof fileName, "%Y%m%d.csv", &time);
         if (!hasFile(fileName))
         {
-            snprintf(headers, HEADER_SIZE, "%s", HEADER1);
-            if (logStringToFile(headers, fileName))
+            if (logStringToFile(blueSky.getHeader(), fileName))
                 ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
         }
 
-        str.clear();
-        
-        logStringToFile(buffer, fileName);
+        strftime(time_str, sizeof(time_str), "%Y/%m/%d %H:%M:%S", &time);
+        str.append(time_str).append(",");
+        for (int i = 0; i < blueSky.get_length(); i++)
+        {
+            str.append(blueSky.getValue(i)).append(",");
+        }
 
-        // char time_str[25];
-        // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);
-        /* This function is used for checking memory leak */
+        logStringToFile(str, fileName);
+        str.clear();
+
         // memoryLogging(time_str);
 
         vTaskDelay(xDelay);
@@ -73,7 +80,7 @@ void memoryTask(void *param)
         SD_getFreeSpace(&total, &free);
         if (free < 10000)
         {
-            ESP_LOGI("raydebug", "try to remove old file");
+            ESP_LOGI(TAG_DATALOG, "try to remove old file");
             removeOldestFile();
         }
         vTaskDelay(xDelay * 10);
@@ -109,17 +116,6 @@ void stopLogging()
         vTaskDelete(memory_task);
         memory_task = NULL;
     }
-}
-
-/**
- * Check if the logging task is running. Return 1 if it is running
- * and return 0 if it is not.
- */
-int isLoggingOn()
-{
-    if (memory_task && task_handle && isMounted())
-        return 1;
-    return 0;
 }
 
 /*Allow us to automatically mount and unmount SD card
