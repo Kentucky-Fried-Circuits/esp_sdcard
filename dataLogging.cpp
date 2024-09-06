@@ -12,18 +12,14 @@
  * to what you need.
  */
 #include "SDCard.h"
-#include "blueSkyModbus.h"
-#include "ds3231.h"
 
 #define BUFFER_SIZE 300
 
 TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
-const TickType_t xDelay = 5500 / portTICK_PERIOD_MS;
+const TickType_t xDelay = 5000 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
-
-extern i2c_dev_t clock_dev;
-extern bsmb blueSky;
+extern float currentFlowRate;
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -35,31 +31,21 @@ extern bsmb blueSky;
 void dataNowLog(void *pv_args)
 {
     std::string str;
-    struct tm time;
-    char time_str[25];
 
     vTaskDelay(5000);
 
     for (;;)
     {
-        char fileName[FILE_NAME_SIZE];
+        char *fileName = "Flow.csv";
+        str.append("Flow Rate");
 
-        ds3231_get_time(&clock_dev, &time);
-
-        strftime(fileName, sizeof fileName, "%Y%m%d.csv", &time);
         if (!hasFile(fileName))
         {
-            if (logStringToFile(blueSky.getHeader(), fileName))
+            if (logStringToFile(str, fileName))
                 ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
         }
-
-        strftime(time_str, sizeof(time_str), "%Y/%m/%d %H:%M:%S", &time);
-        str.append(time_str).append(",");
-
-        for (int i = 0; i < blueSky.get_length(); i++)
-        {
-            str.append(blueSky.getValue(i)).append(",");
-        }
+        str.clear();
+        str.append(std::to_string(currentFlowRate)).append(" GHP");
 
         logStringToFile(str, fileName);
         str.clear();
