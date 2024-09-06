@@ -28,15 +28,17 @@ extern bsmb blueSky;
 /**
  * The basic task for logging live data into csv file in SD card. This function
  * will run roughly every 6 seconds. If the csv file doesn't exist, it will create one.
- * 
+ *
  * A header will be dynamically created from another class since we may expand what we will log.
- * Logging value will be retrieved as string with correct format and unit. 
+ * Logging value will be retrieved as string with correct format and unit.
  */
 void dataNowLog(void *pv_args)
 {
     std::string str;
     struct tm time;
     char time_str[25];
+
+    vTaskDelay(5000);
 
     for (;;)
     {
@@ -53,6 +55,7 @@ void dataNowLog(void *pv_args)
 
         strftime(time_str, sizeof(time_str), "%Y/%m/%d %H:%M:%S", &time);
         str.append(time_str).append(",");
+
         for (int i = 0; i < blueSky.get_length(); i++)
         {
             str.append(blueSky.getValue(i)).append(",");
