@@ -16,6 +16,7 @@
 #include "esp_vfs_fat.h"
 #include "dirent.h"
 
+#define FILE_NAME_CSV "Flow.csv"
 #define MAX_FILES 3
 #define MOUNT_POINT "/sdcard"
 #define FILE_NAME_SIZE 100

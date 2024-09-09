@@ -19,7 +19,6 @@ TaskHandle_t task_handle = NULL;
 TaskHandle_t memory_task = NULL;
 const TickType_t xDelay = 5000 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
-extern float currentFlowRate;
 
 /**
  * The basic task for logging live data into csv file in SD card. This function
@@ -36,19 +35,6 @@ void dataNowLog(void *pv_args)
 
     for (;;)
     {
-        char *fileName = "Flow.csv";
-        str.append("Flow Rate");
-
-        if (!hasFile(fileName))
-        {
-            if (logStringToFile(str, fileName))
-                ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
-        }
-        str.clear();
-        str.append(std::to_string(currentFlowRate)).append(" GHP");
-
-        logStringToFile(str, fileName);
-        str.clear();
 
         // memoryLogging(time_str);
 

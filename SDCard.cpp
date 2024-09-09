@@ -44,7 +44,7 @@ esp_err_t start_sd_card_and_Logging(void)
 
     if (ret == ESP_OK)
     {
-        startLogging();
+        // startLogging();
     }
     return ret;
 }
@@ -59,7 +59,7 @@ esp_err_t unmount_sd_card(void)
 
     if (err == ESP_OK)
     {
-        stopLogging();
+        // stopLogging();
         card = NULL;
         ESP_LOGI(TAG_SD, "SD card is unmounted. Logging task ended.");
     }
