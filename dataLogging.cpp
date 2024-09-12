@@ -31,6 +31,10 @@ extern bsmb blueSky;
  *
  * A header will be dynamically created from another class since we may expand what we will log.
  * Logging value will be retrieved as string with correct format and unit.
+ *
+ * ESP IDF v5 broke the f_getfree() and it will always return OK regardless the SD card is inserted or not. Removed the SD Card Task
+ * and use data log task to allow us to mount and dismount automatically. Unmount the SD card when we fail to log into the SD card and keep
+ * trying to mount when the SD card is not mounted.
  */
 void dataNowLog(void *pv_args)
 {
@@ -38,31 +42,43 @@ void dataNowLog(void *pv_args)
     struct tm time;
     char time_str[25];
 
+    int a = 0;
+
     vTaskDelay(5000);
 
     for (;;)
     {
-        char fileName[FILE_NAME_SIZE];
-
-        ds3231_get_time(&clock_dev, &time);
-
-        strftime(fileName, sizeof fileName, "%Y%m%d.csv", &time);
-        if (!hasFile(fileName))
+        if (!isMounted())
         {
-            if (logStringToFile(blueSky.getHeader(), fileName))
-                ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
+            start_sd_card_and_Logging();
         }
-
-        strftime(time_str, sizeof(time_str), "%Y/%m/%d %H:%M:%S", &time);
-        str.append(time_str).append(",");
-
-        for (int i = 0; i < blueSky.get_length(); i++)
+        else
         {
-            str.append(blueSky.getValue(i)).append(",");
-        }
+            char fileName[FILE_NAME_SIZE];
 
-        logStringToFile(str, fileName);
-        str.clear();
+            ds3231_get_time(&clock_dev, &time);
+
+            strftime(fileName, sizeof fileName, "%Y%m%d.csv", &time);
+            if (!hasFile(fileName))
+            {
+                if (logStringToFile(blueSky.getHeader(), fileName))
+                    ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
+            }
+
+            // strftime(time_str, sizeof(time_str), "%Y/%m/%d %H:%M:%S", &time);
+            // str.append(time_str).append(",");
+
+            str.append("Logging file ").append(std::to_string(a++));
+
+            for (int i = 0; i < blueSky.get_length(); i++)
+            {
+                str.append(blueSky.getValue(i)).append(",");
+            }
+
+            if (!logStringToFile(str, fileName))
+                unmount_sd_card();
+            str.clear();
+        }
 
         // memoryLogging(time_str);
 
@@ -99,7 +115,8 @@ void startLogging()
 {
     if (task_handle == NULL)
         xTaskCreate(dataNowLog, "dataLoggingTask", configMINIMAL_STACK_SIZE * 5, NULL, 6, &task_handle);
-
+    /*Delay for mounting the SD card*/
+    vTaskDelay(7000);
     if (memory_task == NULL)
         xTaskCreate(memoryTask, "memoryTask", configMINIMAL_STACK_SIZE * 5, NULL, 4, &memory_task);
 }
@@ -121,30 +138,7 @@ void stopLogging()
     }
 }
 
-/*Allow us to automatically mount and unmount SD card
-as long as this task is running*/
-void SDCard_Task(void *arg)
-{
-    // /*Wait for the bus to come online before starting the sd card*/
-    vTaskDelay(1500);
-    uint32_t tot = 0;
-    uint32_t free = 0;
-
-    while (1)
-    {
-
-        if (!isMounted())
-        {
-            start_sd_card_and_Logging();
-        }
-
-        SD_getFreeSpace(&tot, &free);
-
-        vTaskDelay(2000);
-    }
-}
-
 void begin_SD()
 {
-    xTaskCreate(SDCard_Task, "SDcard_task", configMINIMAL_STACK_SIZE * 5, NULL, 7, NULL);
+    startLogging();
 }

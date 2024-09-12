@@ -41,11 +41,6 @@ esp_err_t start_sd_card_and_Logging(void)
         .allocation_unit_size = 16 * 1024};
 
     ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
-
-    if (ret == ESP_OK)
-    {
-        startLogging();
-    }
     return ret;
 }
 
@@ -59,7 +54,6 @@ esp_err_t unmount_sd_card(void)
 
     if (err == ESP_OK)
     {
-        stopLogging();
         card = NULL;
         ESP_LOGI(TAG_SD, "SD card is unmounted. Logging task ended.");
     }
@@ -122,7 +116,7 @@ void removeOldestFile()
  * This function will write the parameter string into a csv file. If the file doesn't exist,
  * it will create a file in the sd card with the fileName. It's fopen "a", so new data will be appended to the end.
  */
-int  logStringToFile(std::string formattedString, char *fileName)
+int logStringToFile(std::string formattedString, char *fileName)
 {
     if (card == NULL)
         return 0;
