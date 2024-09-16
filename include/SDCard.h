@@ -15,16 +15,11 @@
 #include "esp_vfs_fat.h"
 #include "dirent.h"
 
-// #define SD_MAGNETHEREAL
-#define SD_LESS
-
-#ifdef SD_MAGNETHEREAL
+/*Have to define one of these two, RMK board only supports SDMMC. To use SD SPI, you need an external SD SPI slot*/
 #define SD_MMC
-#endif
-#ifdef SD_LESS
-#define SD_SPI
+// #define SD_SPI
+#ifdef SD_SPI
 #define SD_CS_PORT GPIO_NUM_32
-#include "smartBattery.h"
 #endif
 
 #define MAX_FILES 3
@@ -34,7 +29,7 @@ const char *const TAG_SD = "SD_Card";
 
 esp_err_t start_sd_card_and_Logging(void);
 esp_err_t unmount_sd_card(void);
-int logStringToFile(const char *formattedString, char *fileName);
+int logStringToFile(std::string formattedString, char *fileName);
 bool isMounted(void);
 bool SD_getFreeSpace(uint32_t *tot, uint32_t *free);
 void deleteFile(char *filePath);
