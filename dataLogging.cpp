@@ -37,21 +37,25 @@ void dataNowLog(void *pv_args)
     for (;;)
     {
         char fileName[FILE_NAME_SIZE];
-        char buffer[150];
-        char headers[HEADER_SIZE];
 
 #ifdef SD_LESS
 
         bt = smartBattery.get_battery_time();
-        snprintf(fileName, sizeof(fileName), "%d%d%d.csv", bt.month, bt.day, bt.year);
+        snprintf(fileName, sizeof(fileName), "%d-%d-%d.csv", bt.month, bt.day, bt.year);
         if (!hasFile(fileName))
         {
-            snprintf(headers, HEADER_SIZE, "%s", HEADER1);
-            if (logStringToFile(headers, fileName))
+            str.append(HEADER1);
+            if (logStringToFile(str, fileName))
                 ESP_LOGI(TAG_DATALOG, "Created a new file %s", fileName);
         }
 
         str.clear();
+
+        str.append(std::to_string(bt.hours)).append(":").append(std::to_string(bt.minutes)).append(",");
+        str.append(std::to_string(smartBattery.get_battery_voltage())).append(",");
+        str.append(std::to_string(smartBattery.get_battery_current())).append(",");
+        str.append(std::to_string(smartBattery.get_battery_internal_temp_c())).append(",");
+
         vec = smartBattery.get_err_msg();
         if (vec.empty())
             str.append("No error.");
@@ -63,13 +67,9 @@ void dataNowLog(void *pv_args)
             }
         }
 
-        // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-        snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
-                 bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
-                 smartBattery.get_battery_current(),
-                 smartBattery.get_battery_internal_temp_c(),
-                 str.c_str());
-        logStringToFile(buffer, fileName);
+        logStringToFile(str, fileName);
+
+        str.clear();
 #endif
         // char time_str[25];
         // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);

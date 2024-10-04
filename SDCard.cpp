@@ -178,7 +178,7 @@ void removeOldestFile()
  * This function will write the parameter string into a csv file. If the file doesn't exist,
  * it will create a file in the sd card with the fileName. It's fopen "a", so new data will be appended to the end.
  */
-int logStringToFile(const char *formattedString, char *fileName)
+int logStringToFile(std::string formattedString, char *fileName)
 {
     if (card == NULL)
         return 0;
@@ -193,7 +193,7 @@ int logStringToFile(const char *formattedString, char *fileName)
         return 0;
     }
 
-    fprintf(f, "%s\n", formattedString);
+    fprintf(f, "%s\n", formattedString.c_str());
     fclose(f);
 
     return 1;
