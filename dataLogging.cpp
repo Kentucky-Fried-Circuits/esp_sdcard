@@ -39,7 +39,8 @@ void dataNowLog(void *pv_args)
         char fileName[FILE_NAME_SIZE];
 
 #ifdef SD_LESS
-
+        str.clear();
+        
         bt = smartBattery.get_battery_time();
         snprintf(fileName, sizeof(fileName), "%d-%d-%d.csv", bt.month, bt.day, bt.year);
         if (!hasFile(fileName))
@@ -68,8 +69,6 @@ void dataNowLog(void *pv_args)
         }
 
         logStringToFile(str, fileName);
-
-        str.clear();
 #endif
         // char time_str[25];
         // snprintf(time_str, sizeof(time_str), "%d:%d:%d:%d:%d", bt.month, bt.day, bt.year, bt.hours, bt.minutes);
