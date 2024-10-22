@@ -25,6 +25,7 @@
 #define SD_SPI
 #define SD_CS_PORT GPIO_NUM_32
 #include "smartBattery.h"
+#include "LESS_AGS.h"
 #endif
 
 #define MAX_FILES 3

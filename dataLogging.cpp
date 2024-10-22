@@ -14,7 +14,7 @@
  */
 #include "SDCard.h"
 
-#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults"
+#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults,AGS Pin"
 #define HEADER_SIZE 100
 
 TaskHandle_t task_handle = NULL;
@@ -23,6 +23,7 @@ const TickType_t xDelay = 14500 / portTICK_PERIOD_MS;
 const char *TAG_DATALOG = "Data_Logging";
 #ifdef SD_LESS
 extern smartBattery smartBattery;
+extern less_ags less_ags;
 #endif
 
 /**
@@ -64,11 +65,11 @@ void dataNowLog(void *pv_args)
         }
 
         // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-        snprintf(buffer, sizeof(buffer), "%d:%d,%0.2f, %0.2f,%d,%s",
-                 bt.hours, bt.minutes, smartBattery.get_battery_voltage(),
+        snprintf(buffer, sizeof(buffer), "%d:%d:%d,%0.2f, %0.2f,%d,%s,%s",
+                 bt.hours, bt.minutes, bt.second, smartBattery.get_battery_voltage(),
                  smartBattery.get_battery_current(),
                  smartBattery.get_battery_internal_temp_c(),
-                 str.c_str());
+                 str.c_str(), less_ags.checkGenStatus() ? "HIGH" : "LOW");
         logStringToFile(buffer, fileName);
 #endif
         // char time_str[25];
