@@ -14,7 +14,7 @@
  */
 #include "SDCard.h"
 
-#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,Faults,AGS Pin"
+#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,SOC,Faults,AGS Pin"
 #define HEADER_SIZE 100
 
 TaskHandle_t task_handle = NULL;
@@ -65,10 +65,11 @@ void dataNowLog(void *pv_args)
         }
 
         // Battery Internal Date (UTC),Voltage,Current,Temperature,Faults
-        snprintf(buffer, sizeof(buffer), "%d:%d:%d,%0.2f, %0.2f,%d,%s,%s",
+        snprintf(buffer, sizeof(buffer), "%d:%d:%d,%0.2f, %0.2f,%d,%d,%s,%s",
                  bt.hours, bt.minutes, bt.second, smartBattery.get_battery_voltage(),
                  smartBattery.get_battery_current(),
                  smartBattery.get_battery_internal_temp_c(),
+                 smartBattery.get_battery_soc(),
                  str.c_str(), less_ags.checkGenStatus() ? "HIGH" : "LOW");
         logStringToFile(buffer, fileName);
 #endif
