@@ -14,7 +14,7 @@
  */
 #include "SDCard.h"
 
-#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,SOC,Faults,AGS Pin"
+#define HEADER1 "Battery Internal Date (UTC),Voltage,Current,Temperature,SOC,Faults,Fault Detail,AGS Pin"
 #define HEADER_SIZE 100
 
 TaskHandle_t task_handle = NULL;
