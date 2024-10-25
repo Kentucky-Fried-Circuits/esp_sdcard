@@ -55,7 +55,7 @@ void dataNowLog(void *pv_args)
         str.clear();
         vec = smartBattery.get_err_msg();
         if (vec.empty())
-            str.append("No error.");
+            str.append("No error.,N/A");
         else
         {
             for (auto it : vec)
